@@ -129,7 +129,7 @@ def MakeDataloaders():
     train_targets = []
     test_targets = []
 
-    for train in range(10): # len(train_list)
+    for train in range(len(train_list)): # len(train_list)
         data, label = load_data_from_file(example_config = train_list[train], sensor = sensors[0], image_width = 320, image_height = 240)
         # print(data.shape)
         # print(label)
@@ -152,7 +152,7 @@ def MakeDataloaders():
             train_targets.append(label)
 
 
-    for test in range(10): # len(test_list)
+    for test in range(len(test_list)): # len(test_list)
         data, label = load_data_from_file(example_config = test_list[test], sensor = sensors[0], image_width = 320, image_height = 240)
         # print(data.shape)
         # print(label)
@@ -178,8 +178,10 @@ def MakeDataloaders():
     # print(train_targets)
 
 
-    train_loader = torch.utils.data.DataLoader(dataset=NVGesture(train_data, train_targets), batch_size=10, shuffle=False, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(dataset=NVGesture(test_data, test_targets), batch_size=10, shuffle=False, pin_memory=True)
+    # CHANGE NUM_WORKERS AND EXPERIMENT!
+
+    train_loader = torch.utils.data.DataLoader(dataset=NVGesture(train_data, train_targets), batch_size=350, shuffle=True, pin_memory=True, num_workers = 4)
+    test_loader = torch.utils.data.DataLoader(dataset=NVGesture(test_data, test_targets), batch_size=350, shuffle=True, pin_memory=True, num_workers = 4)
     print("done loading data")
 
     return train_loader, test_loader

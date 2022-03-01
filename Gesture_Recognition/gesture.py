@@ -77,10 +77,10 @@ class C3D(nn.Module):
 
     def forward(self, x):
 
-        print("initial shape!")
-        print(x.shape)
-        test = x[:,1,:,:,:]
-        print(test.shape)
+        # print("initial shape!")
+        # print(x.shape)
+        # test = x[:,1,:,:,:]
+        # print(test.shape)
         h = self.relu(self.conv1(x))
         # print("AFTER CONV1")
         # print(h.shape)
@@ -140,7 +140,7 @@ class classifier(nn.Module):
         
         self.ltsm = nn.LSTMCell(512, 512)
 
-        self.fc1 = nn.Linear(512,25) # should be 512*2?
+        self.fc1 = nn.Linear(512,26) # should be 512*2?
         # self.lin1 = nn.Linear(487, 256)
         # self.bn = nn.BatchNorm3d(256)
         # self.dropout = nn.Dropout(0.15)
@@ -153,8 +153,8 @@ class classifier(nn.Module):
     # Not sure exactly how this is supposed to work. Got this from a tutorial
     def forward(self, x):
         
-        print("second initial shape!")
-        print(x.shape)
+        # print("second initial shape!")
+        # print(x.shape)
         # test = x[:,1,:,:,:]
         # print(test.shape)
 
@@ -198,16 +198,16 @@ References
 Proceedings of the IEEE international conference on computer vision. 2015.
 """
 
-
-# criterion = nn.CrossEntropyLoss()
-criterion = nn.CTCLoss(reduction='mean', zero_infinity=True) # Try "none" here
-optimizer = optim.SGD(net.parameters(), lr = 0.001, momentum=0.9)
+criterion = nn.CrossEntropyLoss()
+# criterion = nn.NLLLoss(reduction='mean')
+# criterion = nn.CTCLoss(reduction='mean', zero_infinity=True) # Try "none" here
+optimizer = optim.SGD(net.parameters(), lr = 0.002, momentum=0.9)
 # optimizer = optim.Adam(net.parameters(), lr = 0.001)
 
 print("did it make it here?")
 # print(net.device)
 
-epochs = 100
+epochs = 400
 train_accu = []
 train_losses = []
 hasprint = True
@@ -248,19 +248,19 @@ for epoch in range(1, epochs+1):
         optimizer.zero_grad()
         
         outputs = net(inputs)
-        print("SHAPES")
-        print(outputs.shape)
+        # print("SHAPES")
+        # print(outputs.shape)
         # print(outputs)
-        print(labels.shape)
-        print(labels)
+        # print(labels.shape)
+        # print(labels)
         
         
         # log_probs = 8, 10, 26 (HAS BLANK)
         # labels = [10, 8] tensor, each frame has the label eg: [5, 5, 5, 5, 5, 5, 5, 5]
         # input_lengths = torch.tensor(batch_size); - batch size length with all 8s
         # target_lengths = torch.tensor(batch_size); - batch size length with all 8s
-        # train_loss = criterion(outputs, labels)
-        train_loss = criterion(outputs, labels, input_lengths, target_lengths)
+        train_loss = criterion(outputs, labels)
+        # train_loss = criterion(outputs, labels, input_lengths, target_lengths)
         train_loss.backward()
         optimizer.step()
 
@@ -276,10 +276,13 @@ for epoch in range(1, epochs+1):
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
             predicted_outputs = net(inputs)
+            # print(predicted_outputs)
+            # print(outputs)
             val_loss = criterion(predicted_outputs, outputs)
             
             # The label with the highest value will be our prediction 
             _, predicted = torch.max(predicted_outputs, 1) 
+            # print(predicted)
             running_val_loss += val_loss.item()
             total += outputs.size(0) 
             running_accuracy += (predicted == outputs).sum().item() 
@@ -296,7 +299,12 @@ for epoch in range(1, epochs+1):
             # best_accuracy = accuracy 
          
         # Print the statistics of the epoch 
+        writer.add_scalar("Train Loss", train_loss_value, epoch)
+        writer.add_scalar("Validation Loss", val_loss_value, epoch)
+        writer.add_scalar("Test Accuracy", accuracy, epoch)
         print('Completed training batch', epoch, 'Training Loss is: %.4f' %train_loss_value, 'Validation Loss is: %.4f' %val_loss_value, 'Accuracy is %.4f %%' % (accuracy))
 
     # # https://androidkt.com/calculate-total-loss-and-accuracy-at-every-epoch-and-plot-using-matplotlib-in-pytorch/
     # # https://docs.microsoft.com/en-us/windows/ai/windows-ml/tutorials/pytorch-analysis-train-model
+writer.flush()
+writer.close()

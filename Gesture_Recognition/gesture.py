@@ -12,6 +12,8 @@ import time
 import os
 import copy
 import sys
+import datetime
+import model_C3D
 
 sys.path.append('../nvGesture')
 import readdata
@@ -40,7 +42,7 @@ class C3D(nn.Module):
         # conv_input = tf.reshape(data,[-1,8,112,112,3]);
 
         # self.conv1 = nn.Conv3d(3, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))  # same
-        self.conv1 = nn.Conv3d(8, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))  # same
+        self.conv1 = nn.Conv3d(16, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))  # same
         self.norm1a = nn.LayerNorm([64, 112, 112, 3])
         self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2)) # same
 
@@ -138,9 +140,9 @@ class classifier(nn.Module):
     def __init__(self):
         super(classifier, self).__init__()
         
-        self.ltsm = nn.LSTMCell(512, 512)
+        # self.ltsm = nn.LSTMCell(487, 487)
 
-        self.fc1 = nn.Linear(512,26) # should be 512*2?
+        self.fc1 = nn.Linear(487,25) # should be 512*2?
         # self.lin1 = nn.Linear(487, 256)
         # self.bn = nn.BatchNorm3d(256)
         # self.dropout = nn.Dropout(0.15)
@@ -158,19 +160,26 @@ class classifier(nn.Module):
         # test = x[:,1,:,:,:]
         # print(test.shape)
 
-        h = x.view(-1,512)
-        h, _ = self.ltsm(h)
+        # h = x.view(-1,487)
+        # h, _ = self.ltsm(h)
         # print("LTSM shape")
         # print(h.shape)
         # h = h.view(-1, 512)
-        logits = self.fc1(h)
+        logits = self.fc1(x)
         probs = self.softmax(logits)
         # logits = logits.view(-1,4,25)
 
         return probs
 
-net = C3D()
-# net.load_state_dict(torch.load('c3d.pickle')) # experiment with commenting this out and not
+net = model_C3D.C3D()
+net.load_state_dict(torch.load('c3d.pickle')) # experiment with commenting this out and not
+print("BEFORE")
+print(net.modules())
+net = nn.Sequential(*list(net.modules())[:-1]) # strips off last linear layer
+print("AFTER")
+print(net)
+# net = nn.Sequential(*list(net.modules())[:-1]) # strips off last linear layer
+
 net = nn.Sequential(
         net, classifier()
 )
@@ -180,15 +189,18 @@ net.to(device)
 print(net.device_ids)
 
 
-# from torchsummary import summary
-# summary(net, (8,112,112,3), batch_size=batch_size)
-# summary(net, (3,8,112,112), batch_size=batch_size)
+# if(not torch.cuda.is_available()):
+    # print("???")
+    # from torchsummary import summary
+    # summary(net, (3,16,112,112), batch_size=batch_size)
 
-train_loader, test_loader = readdata.MakeDataloaders()
+
+train_loader, test_loader = readdata.MakeDataloaders() #test_dir="../nvGesture/nvgesture_test_correct_cvpr2016.lst", train_dir="../nvGesture/nvgesture_train_correct_cvpr2016.lst"
 
 
-def saveModel(): 
-    path = "./network.pth" 
+def saveModel(acc): 
+    ct = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S_")
+    path = "./network_C3D_pretrain1000_" + ct + str(acc) + "_.pth"
     torch.save(net.state_dict(), path) 
 
 """
@@ -199,24 +211,17 @@ Proceedings of the IEEE international conference on computer vision. 2015.
 """
 
 criterion = nn.CrossEntropyLoss()
-# criterion = nn.NLLLoss(reduction='mean')
-# criterion = nn.CTCLoss(reduction='mean', zero_infinity=True) # Try "none" here
-optimizer = optim.SGD(net.parameters(), lr = 0.002, momentum=0.9)
-# optimizer = optim.Adam(net.parameters(), lr = 0.001)
+optimizer = optim.SGD(net.parameters(), lr = 0.001, momentum=0.9)
 
 print("did it make it here?")
 # print(net.device)
 
-epochs = 400
-train_accu = []
-train_losses = []
+epochs = 1000
+
 hasprint = True
-# input_lengths = torch.full(size=(batch_size,), fill_value=8, dtype=torch.long)
-# target_lengths = torch.full(size=(batch_size,), fill_value=26, dtype=torch.long)
-# log_probs = 8, 10, 26 (HAS BLANK)
-input_lengths = torch.tensor(batch_size);
-target_lengths = torch.tensor(batch_size);
+
 writer = SummaryWriter()
+best_accuracy = 0
 
 for epoch in range(1, epochs+1):
     print("\nEpoch : %d"%epoch)
@@ -228,7 +233,7 @@ for epoch in range(1, epochs+1):
     for i, data in enumerate(train_loader,0):
         # print("batch?")
         # print(i)
-        # print(data)
+        # print(data[0].shape)
         inputs, labels = data
         if hasprint:
             print("inputs and labels shapes")
@@ -294,9 +299,9 @@ for epoch in range(1, epochs+1):
         accuracy = (100 * running_accuracy / total)     
  
         # Save the model if the accuracy is the best 
-        # if accuracy > best_accuracy: 
-            # saveModel() 
-            # best_accuracy = accuracy 
+        if accuracy > best_accuracy: 
+            saveModel(accuracy) 
+            best_accuracy = accuracy 
          
         # Print the statistics of the epoch 
         writer.add_scalar("Train Loss", train_loss_value, epoch)

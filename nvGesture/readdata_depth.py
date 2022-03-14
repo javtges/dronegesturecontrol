@@ -107,12 +107,14 @@ class NVGesture():
             return x, y
 
 
-def MakeDataloaders():
+def MakeDataloaders(test_dir, train_dir):
     
     sensors = ["color", "depth", "duo_left", "duo_right", "duo_disparity"]
     file_lists = dict()
-    file_lists["test"] = "../nvGesture/nvgesture_test_correct_cvpr2016.lst"
-    file_lists["train"] = "../nvGesture/nvgesture_train_correct_cvpr2016.lst"
+    # file_lists["test"] = "../nvGesture/nvgesture_test_correct_cvpr2016.lst"
+    # file_lists["train"] = "../nvGesture/nvgesture_train_correct_cvpr2016.lst"
+    file_lists["test"] = test_dir
+    file_lists["train"] = train_dir
     # file_lists["test"] = "./nvgesture_test_correct_cvpr2016.lst"
     # file_lists["train"] = "./nvgesture_train_correct_cvpr2016.lst"
     train_list = list()
@@ -131,70 +133,83 @@ def MakeDataloaders():
     gestures = [2, 3, 4, 5, 6, 7, 17, 18]
     # gestures = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
 
-    for train in range(30): # len(train_list)
+    for train in range(len(train_list)): # len(train_list)
         data, label = load_data_from_file(example_config = train_list[train], sensor = sensors[0], image_width = 320, image_height = 240)
         # print(data.shape)
-        # print(label)
         print(train, label)
+        #print(train_list[train])
         if label in gestures:
             print("gesture is in the list, adding", label)
             label = gestures.index(label)
             print("label is now", label)
-
             data = data[64:176, 104:216, :, :]
             data2 = np.moveaxis(data,-1,0)
-            # data3 = np.moveaxis(data2,-1,0)
-
             # print(data.shape)
-            print(data2.shape)
+            # print("data2 shape")
+            # print(data2.shape)
 
-            data_split = np.vsplit(data2,5) # split into N groups
+            data_split = np.vsplit(data2,10) # split into 10 groups
 
 
-            # print("here")
+            # print("data split length and shape")
             # print(len(data_split))
-            # print(data_split[0].shape) # here it's 16,112,112,3
+            # print(data_split[0].shape)
+            data_split = np.moveaxis(data_split,-1,1)
+            # print("resplit length and shape")
+            # print(len(data_split))
+            # print(data_split[0].shape)
+
+            # np.repeat(data_split,3,axis=1)
+
+            # UNCOMMENT IF USING DEPTH, OTHERWISE COLOR
+            # data_split = np.hstack([data_split]*3)
+
+            # print("final length and shape")
+            # print(len(data_split))
+            # print(data_split[0].shape)
 
             for chunk in range(len(data_split)):
-                if(len(data_split) == 5):
-                    # Reorder such that the shape is 3,16,112,112
-                    clip = data_split[chunk]
-                    clip = np.moveaxis(clip,-1,0)
-                # print("clip shape", clip.shape)
-                train_data.append(clip)
+                train_data.append(data_split[chunk])
                 train_targets.append(label)
 
 
-    for test in range(30): # len(test_list)
+    for test in range(len(test_list)): # len(test_list)
         data, label = load_data_from_file(example_config = test_list[test], sensor = sensors[0], image_width = 320, image_height = 240)
         # print(data.shape)
-        # print(label)
-        print(train, label)
+        print(test, label)
         if label in gestures:
-            print("gesture is in the list, adding", label)
+            #print(train_list[train])
+            print("gesture %d is in the list, adding", label)
             label = gestures.index(label)
             print("label is now", label)
-
             data = data[64:176, 104:216, :, :]
             data2 = np.moveaxis(data,-1,0)
-            # data3 = np.moveaxis(data2,-1,0)
-
             # print(data.shape)
-            print(data2.shape)
+            # print("data2 shape")
+            # print(data2.shape)
 
-            data_split = np.vsplit(data2,5) # split into N groups
+            data_split = np.vsplit(data2,10) # split into 10 groups
 
-            # print("here")
+
+            # print("data split length and shape")
             # print(len(data_split))
-            # print(data_split[0].shape) # here it's 16,112,112,3
+            # print(data_split[0].shape)
+            data_split = np.moveaxis(data_split,-1,1)
+            # print("resplit length and shape")
+            # print(len(data_split))
+            # print(data_split[0].shape)
+
+            # np.repeat(data_split,3,axis=1)
+
+            # UNCOMMENT IF USING DEPTH
+            # data_split = np.hstack([data_split]*3)
+
+            # print("final TEST length and shape")
+            # print(len(data_split))
+            # print(data_split[0].shape)
 
             for chunk in range(len(data_split)):
-                if(len(data_split) == 5):
-                    # Reorder such that the shape is 3,16,112,112
-                    clip = data_split[chunk]
-                    clip = np.moveaxis(clip,-1,0)
-                # print("clip shape", clip.shape)
-                test_data.append(clip)
+                test_data.append(data_split[chunk])
                 test_targets.append(label)
 
     # print(len(train_data))
@@ -203,87 +218,16 @@ def MakeDataloaders():
 
     # CHANGE NUM_WORKERS AND EXPERIMENT!
 
-    train_loader = torch.utils.data.DataLoader(dataset=NVGesture(train_data, train_targets), batch_size=80, shuffle=True, pin_memory=False, num_workers=4)
-    test_loader = torch.utils.data.DataLoader(dataset=NVGesture(test_data, test_targets), batch_size=80, shuffle=True, pin_memory=False, num_workers=4)
+    train_loader = torch.utils.data.DataLoader(dataset=NVGesture(train_data, train_targets), batch_size=30, shuffle=True, pin_memory=True, num_workers = 4)
+    test_loader = torch.utils.data.DataLoader(dataset=NVGesture(test_data, test_targets), batch_size=30, shuffle=True, pin_memory=True, num_workers = 4)
     print("done loading data")
 
     return train_loader, test_loader
 
-
-
-
 if __name__ == "__main__":
 
-    # sensors = ["color", "depth", "duo_left", "duo_right", "duo_disparity"]
-    # file_lists = dict()
-    # file_lists["test"] = "./nvgesture_test_correct_cvpr2016.lst"
-    # file_lists["train"] = "./nvgesture_train_correct_cvpr2016.lst"
-    # train_list = list()
-    # test_list = list()
-
-    # load_split_nvgesture(file_with_split = file_lists["train"],list_split = train_list)
-    # # print(train_list[0])
-    # print(len(train_list))
-    # load_split_nvgesture(file_with_split = file_lists["test"],list_split = test_list)
-    # # print(len(test_list))
-
-    # train_data = []
-    # test_data = []
-    # train_targets = []
-    # test_targets = []
-
-    # for train in range(1): # len(train_list)
-    #     data, label = load_data_from_file(example_config = train_list[train], sensor = sensors[0], image_width = 320, image_height = 240)
-    #     # print(data.shape)
-    #     # print(label)
-    #     data = data[64:176, 104:216, :, :]
-    #     data2 = np.moveaxis(data,-1,0)
-    #     data3 = np.moveaxis(data2,-1,0)
-
-    #     # print(data.shape)
-    #     # print(data3.shape)
-
-    #     data_split = np.hsplit(data3,5) # split into 5 groups
-
-    #     # print(len(data_split))
-    #     # print(data_split[0].shape)
-
-    #     for chunk in range(len(data_split)):
-    #         train_data.append(data_split[chunk])
-    #         train_targets.append(label)
-
-
-    # for test in range(1): # len(test_list)
-    #     data, label = load_data_from_file(example_config = train_list[test], sensor = sensors[0], image_width = 320, image_height = 240)
-    #     # print(data.shape)
-    #     # print(label)
-    #     data = data[64:176, 104:216, :, :]
-    #     data2 = np.moveaxis(data,-1,0)
-    #     data3 = np.moveaxis(data2,-1,0)
-
-    #     # print(data.shape)
-    #     # print(data3.shape)
-
-    #     data_split = np.hsplit(data3,5) # split into 5 groups
-
-    #     # print(len(data_split))
-    #     # print(data_split[0].shape)
-
-    #     for chunk in range(len(data_split)):
-    #         test_data.append(data_split[chunk])
-    #         test_targets.append(label)
-
-    # print(len(train_data))
-    # print(train_data[0].shape)
-    # print(train_targets)
-
-
-    # train_loader = torch.utils.data.DataLoader(dataset=NVGesture(train_data, train_targets), batch_size=1, shuffle=False)
-
-    train_loader, test_loader = MakeDataloaders()
+    train_loader, test_loader = MakeDataloaders(test_dir="./nvgesture_test_correct_cvpr2016.lst", train_dir="./nvgesture_train_correct_cvpr2016.lst")
     print(train_loader)
-    # train_features, train_labels = next(iter(train_loader))
-    # print(train_labels)
 
     
     # This shows what the 80 - frame videos are doing!

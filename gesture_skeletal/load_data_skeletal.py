@@ -6,6 +6,7 @@ import numpy
 import pickle
 from scipy import ndimage as ndimage
 from sklearn.model_selection import train_test_split
+import numpy as np
 
 
 def resize_gestures(input_gestures, final_length=100):
@@ -68,6 +69,12 @@ def load_gestures(dataset='dhg', root='./dataset_dhg1428', version_x='3D', versi
 
     gestures_filenames = sorted(glob.glob(pattern))
     gestures = [numpy.genfromtxt(f) for f in gestures_filenames]
+
+    print("lens")
+    print(len(gestures))
+    print(len(gestures[0]))
+    print(len(gestures[0][0]))
+
     if resize_gesture_to_length is not None:
         gestures = resize_gestures(gestures, final_length=resize_gesture_to_length)
 
@@ -125,4 +132,4 @@ data = {
     'y_train_14': y_train_14,
     'y_test_14': y_test_14
 }
-write_data(data, filepath='dhg_data_14.pckl')
+# write_data(data, filepath='dhg_data_14.pckl')

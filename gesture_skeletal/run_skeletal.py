@@ -18,7 +18,7 @@ from model_skeletal import HandGestureNet
 
 num_classes = 14
 num_channels = 66
-sequence_length = 60
+sequence_length = 100
 input_data = []
 value = 0
 out = np.zeros(num_classes)
@@ -47,16 +47,17 @@ if not found_rgb:
     print("The demo requires Depth camera with Color sensor")
     exit(0)
 
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+config.enable_stream(rs.stream.depth, 424, 240, rs.format.z16, 60)
 
 if device_product_line == 'L500':
-    config.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
+    config.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 60)
 else:
-    config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+    config.enable_stream(rs.stream.color, 424, 240, rs.format.bgr8, 60)
 
 # Start streaming
 cfg = pipeline.start(config)
 profile = cfg.get_stream(rs.stream.color)
+print(profile.fps())
 intr = profile.as_video_stream_profile().get_intrinsics()
 
 # profile = config.get_stream(rs.stream.depth)
@@ -132,10 +133,10 @@ def find_hand(frame, depth_image):
                 distance_list = []
                 
                 for point in lmlist:
-                    if point[1] >= 480:
-                        point[1] = 479
-                    if point[0] >= 640:
-                        point[0] = 639
+                    if point[1] >= 240:
+                        point[1] = 239
+                    if point[0] >= 424:
+                        point[0] = 423
                     # POINT 0 IS X POINT 1 IS Y
                     coords = get_xyz_from_image(depth_image, point[0], point[1], intr)
                     distance_list = distance_list + coords
@@ -211,7 +212,6 @@ try:
                 input_data = np.array(input_data)
                 input_data = np.expand_dims(input_data, axis=0)
                 input_data = resize_gestures(input_data)
-
 
                 input_data = torch.from_numpy(input_data).float()
 

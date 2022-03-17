@@ -171,145 +171,148 @@ class classifier(nn.Module):
 
         return probs
 
-net = model_C3D.C3D()
-net.load_state_dict(torch.load('c3d.pickle')) # experiment with commenting this out and not
-print("BEFORE")
-print(net.modules())
-net = nn.Sequential(*list(net.modules())[:-1]) # strips off last linear layer
-print("AFTER")
-print(net)
-# net = nn.Sequential(*list(net.modules())[:-1]) # strips off last linear layer
-
-net = nn.Sequential(
-        net, classifier()
-)
-
-net = nn.DataParallel(net)
-net.to(device)
-print(net.device_ids)
-
-
-# if(not torch.cuda.is_available()):
-    # print("???")
-    # from torchsummary import summary
-    # summary(net, (3,16,112,112), batch_size=batch_size)
-
-
-train_loader, test_loader = readdata.MakeDataloaders() #test_dir="../nvGesture/nvgesture_test_correct_cvpr2016.lst", train_dir="../nvGesture/nvgesture_train_correct_cvpr2016.lst"
-
-
 def saveModel(acc): 
     ct = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S_")
     path = "./network_C3D_pretrain1000_" + ct + str(acc) + "_.pth"
     torch.save(net.state_dict(), path) 
 
-"""
-References
-----------
-[1] Tran, Du, et al. "Learning spatiotemporal features with 3d convolutional networks." 
-Proceedings of the IEEE international conference on computer vision. 2015.
-"""
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr = 0.001, momentum=0.9)
+if __name__ == "__main__":
 
-print("did it make it here?")
-# print(net.device)
+    net = model_C3D.C3D()
+    net.load_state_dict(torch.load('c3d.pickle')) # experiment with commenting this out and not
+    print("BEFORE")
+    print(net.modules())
+    net = nn.Sequential(*list(net.modules())[:-1]) # strips off last linear layer
+    print("AFTER")
+    print(net)
+    # net = nn.Sequential(*list(net.modules())[:-1]) # strips off last linear layer
 
-epochs = 1000
+    net = nn.Sequential(
+            net, classifier()
+    )
 
-hasprint = True
-
-writer = SummaryWriter()
-best_accuracy = 0
-
-for epoch in range(1, epochs+1):
-    print("\nEpoch : %d"%epoch)
-    running_train_loss = 0.0
-    running_val_loss = 0.0
-    running_accuracy = 0.0
-    total = 0
-    # Loop through all the data
-    for i, data in enumerate(train_loader,0):
-        # print("batch?")
-        # print(i)
-        # print(data[0].shape)
-        inputs, labels = data
-        if hasprint:
-            print("inputs and labels shapes")
-            print(inputs.shape)
-            print(labels.shape)
-            hasprint = False
-        if torch.cuda.is_available():
-            inputs = inputs.cuda()
-            labels = labels.cuda()
-        
-
-        # print(device)
-        # print(inputs.device)
-        # print(labels.device)
+    net = nn.DataParallel(net)
+    net.to(device)
+    print(net.device_ids)
 
 
-        optimizer.zero_grad()
-        
-        outputs = net(inputs)
-        # print("SHAPES")
-        # print(outputs.shape)
-        # print(outputs)
-        # print(labels.shape)
-        # print(labels)
-        
-        
-        # log_probs = 8, 10, 26 (HAS BLANK)
-        # labels = [10, 8] tensor, each frame has the label eg: [5, 5, 5, 5, 5, 5, 5, 5]
-        # input_lengths = torch.tensor(batch_size); - batch size length with all 8s
-        # target_lengths = torch.tensor(batch_size); - batch size length with all 8s
-        train_loss = criterion(outputs, labels)
-        # train_loss = criterion(outputs, labels, input_lengths, target_lengths)
-        train_loss.backward()
-        optimizer.step()
+    if(not torch.cuda.is_available()):
+        print("???")
+        from torchsummary import summary
+        summary(net, (3,16,112,112), batch_size=batch_size)
 
-        running_train_loss += train_loss.item()
 
-    train_loss_value = running_train_loss/len(train_loader)
+    train_loader, test_loader = readdata.MakeDataloaders() #test_dir="../nvGesture/nvgesture_test_correct_cvpr2016.lst", train_dir="../nvGesture/nvgesture_train_correct_cvpr2016.lst"
 
-    with torch.no_grad(): 
-        net.eval() 
-        for data in test_loader:
-            inputs, outputs = data 
+
+    """
+    References
+    ----------
+    [1] Tran, Du, et al. "Learning spatiotemporal features with 3d convolutional networks." 
+    Proceedings of the IEEE international conference on computer vision. 2015.
+    """
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), lr = 0.001, momentum=0.9)
+
+    print("did it make it here?")
+    # print(net.device)
+
+    epochs = 1000
+
+    hasprint = True
+
+    writer = SummaryWriter()
+    best_accuracy = 0
+
+    for epoch in range(1, epochs+1):
+        print("\nEpoch : %d"%epoch)
+        running_train_loss = 0.0
+        running_val_loss = 0.0
+        running_accuracy = 0.0
+        total = 0
+        # Loop through all the data
+        for i, data in enumerate(train_loader,0):
+            # print("batch?")
+            # print(i)
+            # print(data[0].shape)
+            inputs, labels = data
+            if hasprint:
+                print("inputs and labels shapes")
+                print(inputs.shape)
+                print(labels.shape)
+                hasprint = False
             if torch.cuda.is_available():
                 inputs = inputs.cuda()
-                outputs = outputs.cuda()
-            predicted_outputs = net(inputs)
-            # print(predicted_outputs)
-            # print(outputs)
-            val_loss = criterion(predicted_outputs, outputs)
+                labels = labels.cuda()
             
-            # The label with the highest value will be our prediction 
-            _, predicted = torch.max(predicted_outputs, 1) 
-            # print(predicted)
-            running_val_loss += val_loss.item()
-            total += outputs.size(0) 
-            running_accuracy += (predicted == outputs).sum().item() 
 
-        # Calculate validation loss value 
-        val_loss_value = running_val_loss/len(test_loader)
+            # print(device)
+            # print(inputs.device)
+            # print(labels.device)
+
+
+            optimizer.zero_grad()
+            
+            outputs = net(inputs)
+            # print("SHAPES")
+            # print(outputs.shape)
+            # print(outputs)
+            # print(labels.shape)
+            # print(labels)
+            
+            
+            # log_probs = 8, 10, 26 (HAS BLANK)
+            # labels = [10, 8] tensor, each frame has the label eg: [5, 5, 5, 5, 5, 5, 5, 5]
+            # input_lengths = torch.tensor(batch_size); - batch size length with all 8s
+            # target_lengths = torch.tensor(batch_size); - batch size length with all 8s
+            train_loss = criterion(outputs, labels)
+            # train_loss = criterion(outputs, labels, input_lengths, target_lengths)
+            train_loss.backward()
+            optimizer.step()
+
+            running_train_loss += train_loss.item()
+
+        train_loss_value = running_train_loss/len(train_loader)
+
+        with torch.no_grad(): 
+            net.eval() 
+            for data in test_loader:
+                inputs, outputs = data 
+                if torch.cuda.is_available():
+                    inputs = inputs.cuda()
+                    outputs = outputs.cuda()
+                predicted_outputs = net(inputs)
+                # print(predicted_outputs)
+                # print(outputs)
+                val_loss = criterion(predicted_outputs, outputs)
                 
-        # Calculate accuracy as the number of correct predictions in the validation batch divided by the total number of predictions done.  
-        accuracy = (100 * running_accuracy / total)     
- 
-        # Save the model if the accuracy is the best 
-        if accuracy > best_accuracy: 
-            saveModel(accuracy) 
-            best_accuracy = accuracy 
-         
-        # Print the statistics of the epoch 
-        writer.add_scalar("Train Loss", train_loss_value, epoch)
-        writer.add_scalar("Validation Loss", val_loss_value, epoch)
-        writer.add_scalar("Test Accuracy", accuracy, epoch)
-        print('Completed training batch', epoch, 'Training Loss is: %.4f' %train_loss_value, 'Validation Loss is: %.4f' %val_loss_value, 'Accuracy is %.4f %%' % (accuracy))
+                # The label with the highest value will be our prediction 
+                _, predicted = torch.max(predicted_outputs, 1) 
+                # print(predicted)
+                running_val_loss += val_loss.item()
+                total += outputs.size(0) 
+                running_accuracy += (predicted == outputs).sum().item() 
 
-    # # https://androidkt.com/calculate-total-loss-and-accuracy-at-every-epoch-and-plot-using-matplotlib-in-pytorch/
-    # # https://docs.microsoft.com/en-us/windows/ai/windows-ml/tutorials/pytorch-analysis-train-model
-writer.flush()
-writer.close()
+            # Calculate validation loss value 
+            val_loss_value = running_val_loss/len(test_loader)
+                    
+            # Calculate accuracy as the number of correct predictions in the validation batch divided by the total number of predictions done.  
+            accuracy = (100 * running_accuracy / total)     
+    
+            # Save the model if the accuracy is the best 
+            if accuracy > best_accuracy: 
+                saveModel(accuracy) 
+                best_accuracy = accuracy 
+            
+            # Print the statistics of the epoch 
+            writer.add_scalar("Train Loss", train_loss_value, epoch)
+            writer.add_scalar("Validation Loss", val_loss_value, epoch)
+            writer.add_scalar("Test Accuracy", accuracy, epoch)
+            print('Completed training batch', epoch, 'Training Loss is: %.4f' %train_loss_value, 'Validation Loss is: %.4f' %val_loss_value, 'Accuracy is %.4f %%' % (accuracy))
+
+        # # https://androidkt.com/calculate-total-loss-and-accuracy-at-every-epoch-and-plot-using-matplotlib-in-pytorch/
+        # # https://docs.microsoft.com/en-us/windows/ai/windows-ml/tutorials/pytorch-analysis-train-model
+    writer.flush()
+    writer.close()

@@ -132,4 +132,4 @@ data = {
     'y_train_14': y_train_14,
     'y_test_14': y_test_14
 }
-# write_data(data, filepath='dhg_data_14.pckl')
+write_data(data, filepath='dhg_data_14.pckl')

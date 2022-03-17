@@ -18,7 +18,7 @@ import itertools
 
 num_classes = 14
 num_channels = 66
-sequence_length = 20
+sequence_length = 60
 input_data = []
 value = 0
 out = np.zeros(num_classes)
@@ -143,6 +143,9 @@ while(True):
             print(input_data.shape)
 
             prediction = model(input_data)
+            print(prediction)
+            m = torch.nn.Softmax(dim=1)
+            prediction = m(prediction)
             print(prediction)
             _, prediction = prediction.max(dim=1)
             print("predicted {}".format(prediction.tolist()))

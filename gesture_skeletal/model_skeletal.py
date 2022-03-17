@@ -1,10 +1,5 @@
 from __future__ import unicode_literals, print_function, division
 import sys
-if sys.version_info.major < 3:
-    print('You are using python 2, but you should rather use python 3.')
-    print('    If you still want to use python 2, ensure you import:')
-    print('    >> from __future__ import unicode_literals, print_function, division')
-
 import numpy
 import pickle
 import torch
@@ -69,7 +64,7 @@ class HandGestureNet(torch.nn.Module):
         }
     """
     
-    def __init__(self, n_channels=66, n_classes=14, dropout_probability=0.2):
+    def __init__(self, n_channels=66, n_classes=14, dropout_probability=0.3):
 
         super(HandGestureNet, self).__init__()
         
@@ -119,6 +114,9 @@ class HandGestureNet(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(in_features=1936, out_features=n_classes)
         )
+
+        self.softmax = torch.nn.Softmax(dim=1)
+
 
         # Initialization --------------------------------------
         # Xavier init
@@ -175,6 +173,8 @@ class HandGestureNet(torch.nn.Module):
 
         # Fully-Connected Layers
         output = self.fc(all_features)
+
+        # output = self.softmax(output)
 
         return output
 
@@ -318,6 +318,9 @@ def train(model, criterion, optimizer, dataloader,
 
             # Move data to GPU, if available
             x, y = batch
+            # print(idx_batch)
+            # print(x.shape)
+            # print(y)
             x, y = x.to(device), y.to(device)
 
             # zero the gradient parameters
@@ -349,7 +352,7 @@ def train(model, criterion, optimizer, dataloader,
 # Please adjust the training epochs count, and the other hyperparams (lr, dropout, ...), for a non-overfitted training according to your own needs.
 # tip: use tensorboard to display the accuracy (see cells above for tensorboard usage)
 
-num_epochs = 20
+num_epochs = 32
 
 if __name__ == "__main__":
 
